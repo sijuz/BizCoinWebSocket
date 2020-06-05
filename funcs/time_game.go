@@ -2,6 +2,7 @@ package funcs
 
 import (
 	"database/sql"
+	"github.com/gorilla/websocket"
 	"log"
 	"math/rand"
 	"net/http"
@@ -15,24 +16,72 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+type connClass struct {
+	Connection *websocket.Conn
+	UserID int
+}
+
+var checkUserID = make(chan connClass)
+var connectionClose = make(chan int)
+
+func ConnList(close chan struct{}) {
+
+	connections := make(map[int]*websocket.Conn)
+
+	for {
+		select {
+		case conn := <-checkUserID:
+			was := false
+			for key, _ := range connections {
+				if key == conn.UserID {
+					if err := connections[key].WriteJSON(config.Error[6]); err != nil {
+						additionally.SendError("err := connections[key].WriteJSON(config.Error[6]); err != nil", err)
+					}
+					if err := connections[key].Close(); err != nil {
+						additionally.SendError("if err := connections[key].Close(); err != nil {", err)
+						//break
+					}
+					log.Println("User", key, "started new session! Previous connection interrupted!")
+					delete(connections, conn.UserID)
+					// it's something like go-crutch, instead of remove :)
+					was = true
+					break
+				}
+			}
+			if !was {
+				connections[conn.UserID] = conn.Connection
+				log.Println("User", conn.UserID, "added successfully!")
+			}
+
+		case conn := <-connectionClose:
+			if err := connections[conn].Close(); err != nil {
+				additionally.SendError("if err := connections[conn].Close(); err != nil {\n\t\t\t\tadditionally.SendError(\"Error in sending disconnect status:\", err)\n\t\t\t\t//break\n\t\t\t}", err)
+				//break
+			}
+			delete(connections, conn)
+		case <-close:
+			return
+		}
+	}
+}
+
+
 // TimeGame is Websocket /time_game path function
 func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 	var upgrader = config.Upgrader
 	//ws, err := upgrader.Upgrade(w, r, nil)
-	//ws.SetReadDeadline(time.Now().Add(10 * time.Second))
-
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Error in TimeGame method: ", err)
+		additionally.SendError("c, err := upgrader.Upgrade(w, r, nil) ", err)
 		return
 	}
-	defer c.Close()
-
-	// тут пойдёт проверка подписи, наверное
-	// статус отправлю такой же, потом переправлю, если чё
+	defer func() {
+		_ = c.Close()
+	}()
 
 	err = c.WriteJSON(config.ConfirmData{
 		Status:           "connected",
@@ -42,23 +91,33 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println("Error in sending connected status (time_game):", err)
+		additionally.SendError("err = c.WriteJSON(config.ConfirmData{\n\t\tStatus:           \"connected\",\n\t\tChannel:          \"time_game\",\n\t\tUseVkSignChecker: config.Conf.UseVkSignChecker,\n\t})", err)
 		return
 	}
 
 	log.Println("TimeGame Connection request!")
+//}
+//
+//func timeGame(c *websocket.Conn) {
 
 	vkUserID := 0
 	signResult := false
 
 	for {
+		if err := c.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil {
+			log.Println("Error in Setting timeout!", err)
+			additionally.SendError("if err := c.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil {\n\t\t\tlog.Println(\"Error in Setting timeout!\", err)\n\t\t\tadditionally.SendError(\"Error in Setting timeout:\", err)\n\t\t}", err)
+		}
+
 		var data config.Data
-		log.Println("******")
-		err = c.ReadJSON(&data)
+		err := c.ReadJSON(&data)
 		if err != nil {
 			log.Println("Message read error in update: ", err)
+			additionally.SendError("err := c.ReadJSON(&data)", err)
 			err = c.WriteJSON(config.Error[0])
 			if err != nil {
-				log.Println("it's an error in error message sending: ", err)
+				additionally.SendError("it's an error in error message sending: ", err)
+				log.Println("err = c.WriteJSON(config.Error[0])", err)
 			}
 			return
 		}
@@ -75,8 +134,14 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 							UseVksignChecker: config.Conf.UseVkSignChecker,
 						})
 
+						checkUserID <- connClass{
+							Connection: c,
+							UserID: vkUserID,
+						}
+
 						if err != nil {
 							log.Println("error in sending singChecker status (time_game):", err)
+							additionally.SendError("err = c.WriteJSON(config.Error[1])", err)
 							return
 						}
 
@@ -86,6 +151,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 						err = c.WriteJSON(config.Error[1])
 						if err != nil {
 							log.Println("error in sending singChecker status (time_game):", err)
+							additionally.SendError("err = c.WriteJSON(config.Error[1])", err)
 							return
 						}
 
@@ -96,6 +162,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					err = c.WriteJSON(config.Error[1])
 					if err != nil {
 						log.Println("error in sending singChecker status (time_game):", err)
+						additionally.SendError("err = c.WriteJSON(config.Error[1])", err)
 						return
 					}
 					break
@@ -105,6 +172,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 				err = c.WriteJSON(config.Error[1])
 				if err != nil {
 					log.Println("error in sending singChecker status (time_game):", err)
+					additionally.SendError("err = c.WriteJSON(config.Error[1])", err)
 					return
 				}
 				break
@@ -118,13 +186,27 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 			})
 			if err != nil {
 				log.Println("error in sending singChecker status (time_game):", err)
+				additionally.SendError("err = c.WriteJSON(config.SignCheck{\n\t\t\t\tCheckSignStatus:  \"OK\",\n\t\t\t\tUseVksignChecker: config.Conf.UseVkSignChecker,\n\t\t\t})", err)
 				return
 			}
+
+			checkUserID <- connClass{
+				Connection: c,
+				UserID: vkUserID,
+			}
+
 			break
 		}
 	}
+	defer func(close chan<-int){
+		close <-vkUserID
+	}(nil)
 
-	log.Println("New socket connected to TimeGame!")
+	if !signResult {
+		return
+	}
+
+	log.Println("New socket connected to TimeGame! ID:", vkUserID)
 
 	db, err := sql.Open(
 		"mysql",
@@ -135,6 +217,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		log.Println("error in opening db (time_game):", err)
+		additionally.SendError("db, err := sql.Open(\n\t\t\"mysql\",\n\t\tconfig.Conf.DbUser+\":\"+\n\t\t\tconfig.Conf.DbPassword+\n\t\t\t\"@tcp(\"+config.Conf.DbHostPort+\")/\"+\n\t\t\tconfig.Conf.DbName,\n\t)", err)
 		return
 	}
 
@@ -143,18 +226,24 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for signResult {
-		log.Println("....")
 		var data config.GameData // data to load
 
-		err = c.ReadJSON(&data) // read data
-		if err != nil {
-			log.Println("error in reading action JSON (time_game):", err)
+		if err = c.SetReadDeadline(time.Now().Add(time.Hour)); err != nil {
+			log.Println("Error in Setting timeout!", err)
+			additionally.SendError("if err = c.SetReadDeadline(time.Now().Add(time.Hour)); err != nil {\n\t\t\tlog.Println(\"Error in Setting timeout!\", err)\n\t\t\tadditionally.SendError(\"Error in Setting timeout! (time_name)\", err)\n\t\t\treturn\n\t\t}", err)
 			return
 		}
 
-		if data.Action == "gamestart" && data.Status == "start_game" { // now game is starting
+		err = c.ReadJSON(&data) // read data
 
-			log.Println("Game Started!")
+		if err != nil {
+			log.Println("error in reading action JSON (time_game):", err)
+			additionally.SendError("error in reading action JSON (time_game):", err)
+			return
+		}
+		//clickTime := time.Now().Unix()
+
+		if data.Action == "gamestart" && data.Status == "start_game" { // now game is starting
 
 			var balance int // user's balance
 			{
@@ -165,7 +254,6 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					vkUserID,
 				) // db request
 				if err != nil {
-					// panic(err)
 					log.Println("error in getting balance (time_game):", err)
 					return
 				}
@@ -173,8 +261,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 				for row.Next() {
 					err = row.Scan(&balance)
 					if err != nil {
-						// panic(err)
-						log.Println("error in scaning balance (time_game):", err)
+						log.Println("error in scanning balance (time_game):", err)
 						return
 					}
 					was = true
@@ -188,8 +275,6 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			log.Println(balance)
-
 			rand.Seed(time.Now().UnixNano()) // randomise random :)
 
 			if fir, sec := rand.Intn(10)+1, rand.Intn(10)+1; fir == sec {
@@ -201,6 +286,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					balance,
 					vkUserID,
 				); err != nil {
+					additionally.SendError("error in changing balance", err)
 					log.Print("error in changing balance")
 				}
 
@@ -210,6 +296,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					"balance": balance,
 					"to_plus": toPlus,
 				}); err != nil {
+					additionally.SendError("error in sending win status (time_game):", err)
 					log.Println("error in sending win status (time_game):", err)
 					return
 				}
@@ -219,10 +306,10 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 				if balance < toMines {
 					if err = c.WriteJSON(config.Error[5]); err != nil {
+						additionally.SendError("error in sending an error(5) (time_game):", err)
 						log.Println("error in sending an error(5) (time_game):", err)
 						return
 					}
-					log.Println("not enough money")
 					continue
 				}
 
@@ -234,6 +321,8 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					vkUserID,
 				); err != nil {
 					log.Print("error in changing balance")
+					additionally.SendError("error in changing balance", err)
+					return
 				}
 
 				if err = c.WriteJSON(map[string]interface{}{
@@ -243,6 +332,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					"to_mines": toMines,
 				}); err != nil {
 					log.Println("error in sending defeat status (time_game):", err)
+					additionally.SendError("error in sending defeat status (time_game):", err)
 					return
 				}
 
@@ -253,6 +343,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					"balance": balance,
 				}); err != nil {
 					log.Println("error in sending none status (time_game):", err)
+					additionally.SendError("error in sending none status (time_game):", err)
 					return
 				}
 			}
@@ -262,6 +353,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 			err := c.WriteJSON(config.Error[4])
 			if err != nil {
 				log.Println("error in sending an error(4) (time_game):", err)
+				additionally.SendError("error in sending an error(4) (time_game):", err)
 				return
 			}
 

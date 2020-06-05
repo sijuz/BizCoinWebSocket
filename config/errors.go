@@ -26,4 +26,8 @@ var Error []someError = []someError{
 		Error: "Not Enough money!",
 		Code:  5,
 	},
+	someError{
+		Error: "Closed! Started new session!",
+		Code:  6,
+	},
 }

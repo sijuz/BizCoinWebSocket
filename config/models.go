@@ -39,27 +39,26 @@ type GameData struct {
 // Config is config
 type Config struct {
 	// server settings
-	HostPort string
-	Workers  int
+	HostPort          string `json:"host_port"`
+	BugReportHostPort string `json:"bug_report"`
+	MyHostPort        string `json:"my_host_port"`
 	// economy settings
-	MaxProfit int
-	MinProfit int
-	MinLoss int
-	MaxLoss int
-	MaxPrice  int
-	MinPrice  int
-	WinCount int
-	DefeatCount int
+	MaxProfit int `json:"max_profit"`
+	MinProfit int `json:"min_profit"`
+	MinLoss   int `json:"min_loss"`
+	MaxLoss   int `json:"max_loss"`
+	MaxPrice  int `json:"max_price"`
+	MinPrice  int `json:"min_price"`
 	// Db Settings
-	DbHostPort string
-	DbName     string
-	DbUser     string
-	DbPassword string
+	DbHostPort string `json:"db_host_port"`
+	DbName     string `json:"db_name"`
+	DbUser     string `json:"db_user"`
+	DbPassword string `json:"db_password"`
 	// Vk App Settings
-	VkAppID           string
-	VkAppSecret       string
-	VkAppServiceToken string
-	UseVkSignChecker  bool
+	VkAppID           string `json:"vk_app_id"`
+	VkAppSecret       string `json:"vk_app_secret"`
+	VkAppServiceToken string `json:"vk_app_service_token"`
+	UseVkSignChecker  bool   `json:"use_vk_sign_checker"`
 }
 
 type someError struct {
