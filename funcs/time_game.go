@@ -2,7 +2,6 @@ package funcs
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -233,11 +232,9 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 			// 	return
 			// }
 
-			if fir, sec := rand.Intn(10) + 1, rand.Intn(10) + 1; fir == sec {
+			if fir, sec := rand.Intn(10)+1, rand.Intn(10)+1; fir == sec {
 
 				balance += int(config.Conf.MinProfit + rand.Intn(config.Conf.MaxProfit-config.Conf.MinProfit))
-
-
 
 				if _, err = db.Exec(
 					"update user set balance_bizcoin = ? where user_id = ?",
@@ -256,7 +253,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-				if fir, sec := rand.Intn(20) + 1, rand.Intn(20) + 1; fir == sec {
+				if fir, sec := rand.Intn(20)+1, rand.Intn(20)+1; fir == sec {
 
 					balance -= int(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
 
@@ -277,26 +274,27 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
+				} else {
+					log.Println("test2")
+					if err = c.WriteJSON(map[string]interface{}{
+						"action":  "win_checking",
+						"status":  "none",
+						"balance": balance,
+					}); err != nil {
+						log.Println("error in sending none status (time_game):", err)
+						return
+					}
+				}
+
 			} else {
-				if err = c.WriteJSON(map[string]interface{}{
-					"action":  "win_checking",
-					"status":  "none",
-					"balance": balance,
-				}); err != nil {
-					log.Println("error in sending none status (time_game):", err)
+
+				err := c.WriteJSON(config.Error[4])
+				if err != nil {
+					log.Println("error in sending an error(4) (time_game):", err)
 					return
 				}
+
 			}
-
-
-		} else {
-
-			err := c.WriteJSON(config.Error[4])
-			if err != nil {
-				log.Println("error in sending an error(4) (time_game):", err)
-				return
-			}
-
 		}
 	}
 }

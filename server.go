@@ -6,9 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
-	"time"
 )
 
 var addr = flag.String(
