@@ -132,28 +132,10 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 		log.Println("error in opening db (time_game):", err)
 		return
 	}
-	defer db.Close()
 
-	/*
-		var stringedList string                                             // counts from mysql
-		row, err := db.Query("select price from games where name = 'игра'") // mysql request
-		{
-			if err != nil {
-				// panic(err)
-				log.Println("error in getting balance (time_game):", err)
-				return
-			}
-
-			for row.Next() {
-				err = row.Scan(&stringedList) // get list
-				if err != nil {
-					log.Println("error in scaning balance value! (time_game):", err)
-					return
-				}
-			}
-		}
-		listPrices := strings.Split(stringedList, ",") // de stringify list
-	*/
+	defer func() {
+		_ = db.Close()
+	}()
 
 	for signResult {
 
@@ -205,36 +187,9 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 			rand.Seed(time.Now().UnixNano()) // randomise random :)
 
-			// price := int(
-			// 	config.Conf.MinPrice +
-			// 		rand.Intn(
-			// 			config.Conf.MaxPrice-
-			// 				config.Conf.MinPrice+1,
-			// 		),
-			// )
-
-			// if balance < price {
-			// 	if err = c.WriteJSON(config.Error[5]); err != nil {
-			// 		log.Println("error in sending an error(5) (time_game):", err)
-			// 		return
-			// 	}
-			// 	log.Println("not enough money")
-			// 	continue
-			// }
-			//
-			// _, err = db.Exec(
-			// 	"update user set balance_bizcoin = ? where user_id = ?",
-			// 	balance-price,
-			// 	vkUserID,
-			// )
-			// if err != nil {
-			// 	log.Println("error in changing balance (time_game):", err)
-			// 	return
-			// }
-
 			if fir, sec := rand.Intn(10)+1, rand.Intn(10)+1; fir == sec {
-
-				balance += int(config.Conf.MinProfit + rand.Intn(config.Conf.MaxProfit-config.Conf.MinProfit))
+				toPlus := int(config.Conf.MinProfit + rand.Intn(config.Conf.MaxProfit-config.Conf.MinProfit))
+				balance += toPlus
 
 				if _, err = db.Exec(
 					"update user set balance_bizcoin = ? where user_id = ?",
@@ -248,42 +203,54 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					"action":  "win_checking",
 					"status":  "win",
 					"balance": balance,
+					"to_plus": toPlus,
 				}); err != nil {
 					log.Println("error in sending win status (time_game):", err)
 					return
 				}
 			} else if fir, sec := rand.Intn(20)+1, rand.Intn(20)+1; fir == sec {
 
-					balance -= int(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
+				toMines := int(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
 
-					if _, err = db.Exec(
-						"update user set balance_bizcoin = ? where user_id = ?",
-						balance,
-						vkUserID,
-					); err != nil {
-						log.Print("error in changing balance")
-					}
-
-					if err = c.WriteJSON(map[string]interface{}{
-						"action":  "win_checking",
-						"status":  "defeat",
-						"balance": balance,
-					}); err != nil {
-						log.Println("error in sending defeat status (time_game):", err)
+				if balance < toMines {
+					if err = c.WriteJSON(config.Error[5]); err != nil {
+						log.Println("error in sending an error(5) (time_game):", err)
 						return
 					}
+					log.Println("not enough money")
+					continue
+				}
+
+				balance -= toMines
+
+				if _, err = db.Exec(
+					"update user set balance_bizcoin = ? where user_id = ?",
+					balance,
+					vkUserID,
+				); err != nil {
+					log.Print("error in changing balance")
+				}
+
+				if err = c.WriteJSON(map[string]interface{}{
+					"action":   "win_checking",
+					"status":   "defeat",
+					"balance":  balance,
+					"to_mines": toMines,
+				}); err != nil {
+					log.Println("error in sending defeat status (time_game):", err)
+					return
+				}
 
 			} else {
-					log.Println("test2")
-					if err = c.WriteJSON(map[string]interface{}{
-						"action":  "win_checking",
-						"status":  "none",
-						"balance": balance,
-					}); err != nil {
-						log.Println("error in sending none status (time_game):", err)
-						return
-					}
+				if err = c.WriteJSON(map[string]interface{}{
+					"action":  "win_checking",
+					"status":  "none",
+					"balance": balance,
+				}); err != nil {
+					log.Println("error in sending none status (time_game):", err)
+					return
 				}
+			}
 
 		} else {
 
