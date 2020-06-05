@@ -252,8 +252,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					log.Println("error in sending win status (time_game):", err)
 					return
 				}
-
-				if fir, sec := rand.Intn(20)+1, rand.Intn(20)+1; fir == sec {
+			} else if fir, sec := rand.Intn(20)+1, rand.Intn(20)+1; fir == sec {
 
 					balance -= int(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
 
@@ -274,7 +273,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-				} else {
+			} else {
 					log.Println("test2")
 					if err = c.WriteJSON(map[string]interface{}{
 						"action":  "win_checking",
@@ -286,15 +285,14 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
-			} else {
+		} else {
 
-				err := c.WriteJSON(config.Error[4])
-				if err != nil {
-					log.Println("error in sending an error(4) (time_game):", err)
-					return
-				}
-
+			err := c.WriteJSON(config.Error[4])
+			if err != nil {
+				log.Println("error in sending an error(4) (time_game):", err)
+				return
 			}
+
 		}
 	}
 }
