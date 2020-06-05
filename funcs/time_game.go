@@ -2,6 +2,7 @@ package funcs
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -232,8 +233,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 			// 	return
 			// }
 
-
-			if fir, sec := rand.Intn(config.Conf.WinCount+1), rand.Intn(config.Conf.WinCount+1); fir == sec {
+			if fir, sec := rand.Intn(10) + 1, rand.Intn(10) + 1; fir == sec {
 
 				balance += int(config.Conf.MinProfit + rand.Intn(config.Conf.MaxProfit-config.Conf.MinProfit))
 
@@ -256,29 +256,28 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-			} else if fir, sec = rand.Intn(config.Conf.DefeatCount), rand.Intn(config.Conf.DefeatCount); fir == sec {
+				if fir, sec := rand.Intn(20) + 1, rand.Intn(20) + 1; fir == sec {
 
-				balance -= int(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
+					balance -= int(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
 
-				if _, err = db.Exec(
-					"update user set balance_bizcoin = ? where user_id = ?",
-					balance,
-					vkUserID,
-				); err != nil {
-					log.Print("error in changing balance")
-				}
+					if _, err = db.Exec(
+						"update user set balance_bizcoin = ? where user_id = ?",
+						balance,
+						vkUserID,
+					); err != nil {
+						log.Print("error in changing balance")
+					}
 
-				if err = c.WriteJSON(map[string]interface{}{
-					"action":  "win_checking",
-					"status":  "defeat",
-					"balance": balance,
-				}); err != nil {
-					log.Println("error in sending defeat status (time_game):", err)
-					return
-				}
+					if err = c.WriteJSON(map[string]interface{}{
+						"action":  "win_checking",
+						"status":  "defeat",
+						"balance": balance,
+					}); err != nil {
+						log.Println("error in sending defeat status (time_game):", err)
+						return
+					}
 
 			} else {
-				log.Println("test2")
 				if err = c.WriteJSON(map[string]interface{}{
 					"action":  "win_checking",
 					"status":  "none",
