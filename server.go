@@ -4,6 +4,7 @@ import (
 	"BizCoinWebSocket/config"
 	"BizCoinWebSocket/funcs"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -15,6 +16,7 @@ var addr = flag.String(
 )
 
 func main() {
+	fmt.Println("127.0.0.1:3000")
 	flag.Parse()
 	log.SetFlags(0)
 	http.HandleFunc("/time_game", funcs.TimeGame)

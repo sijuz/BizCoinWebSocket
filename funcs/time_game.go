@@ -15,7 +15,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-
 // TimeGame is Websocket /time_game path function
 func TimeGame(w http.ResponseWriter, r *http.Request) {
 	var upgrader = config.Upgrader
@@ -192,7 +191,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 					was = true
-				}         // get user's balance
+				} // get user's balance
 				if !was { // send an error in case, it's an unknown user
 					err = c.WriteJSON(config.Error[2])
 					if err != nil {
@@ -233,8 +232,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if fir, sec := rand.Intn(config.Conf.WinCount+1), rand.Intn(config.Conf.WinCount+1);
-				fir == sec {
+			if fir, sec := rand.Intn(config.Conf.WinCount+1), rand.Intn(config.Conf.WinCount+1); fir == sec {
 
 				balance += float32(config.Conf.MinProfit + rand.Intn(config.Conf.MaxProfit-config.Conf.MinProfit))
 
@@ -254,8 +252,8 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					log.Println("error in sending win status (time_game):", err)
 					return
 				}
-			} else if fir, sec = rand.Intn(config.Conf.DefeatCount), rand.Intn(config.Conf.DefeatCount);
-				fir == sec {
+
+			} else if fir, sec = rand.Intn(config.Conf.DefeatCount), rand.Intn(config.Conf.DefeatCount); fir == sec {
 
 				balance -= float32(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
 
@@ -275,23 +273,27 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					log.Println("error in sending defeat status (time_game):", err)
 					return
 				}
+
 			} else {
 
 				if err = c.WriteJSON(map[string]interface{}{
-					"action": "win_checking",
-					"status": "none",
+					"action":  "win_checking",
+					"status":  "none",
 					"balance": balance,
 				}); err != nil {
 					log.Println("error in sending none status (time_game):", err)
 					return
 				}
 			}
+
 		} else {
+
 			err := c.WriteJSON(config.Error[4])
 			if err != nil {
 				log.Println("error in sending an error(4) (time_game):", err)
 				return
 			}
+
 		}
 	}
 }
