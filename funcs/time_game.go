@@ -17,7 +17,11 @@ import (
 
 // TimeGame is Websocket /time_game path function
 func TimeGame(w http.ResponseWriter, r *http.Request) {
+
 	var upgrader = config.Upgrader
+	//ws, err := upgrader.Upgrade(w, r, nil)
+	//ws.SetReadDeadline(time.Now().Add(10 * time.Second))
+
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -35,6 +39,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 		Channel:          "time_game",
 		UseVkSignChecker: config.Conf.UseVkSignChecker,
 	})
+
 	if err != nil {
 		log.Println("Error in sending connected status (time_game):", err)
 		return
@@ -47,7 +52,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		var data config.Data
-
+		log.Println("******")
 		err = c.ReadJSON(&data)
 		if err != nil {
 			log.Println("Message read error in update: ", err)
@@ -138,7 +143,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for signResult {
-
+		log.Println("....")
 		var data config.GameData // data to load
 
 		err = c.ReadJSON(&data) // read data
