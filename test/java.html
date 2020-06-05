@@ -1,0 +1,93 @@
+<html>
+    <head>
+        <title>BizCoin WebSocket</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    </head>
+    <body>
+        <p>
+            <button id="connect" name="asd" onclick="connect();">Connect to /time_game</button>
+            <button id="disconnect" name="disconn" onclick="disconnected();">Diconnect</button>
+            <button id="gamestart" name="start" onclick="start_game();">Start Game</button>
+            <button id="sendpass" name="send123" onclick="EnterPassword();">SendPassword</button>
+        </p>
+        <p>
+            <input type="text", id="password", value="1234">
+            <input type="text", id="coef", value="0">
+        </p>
+
+
+        <script language="JavaScript">
+            var ws;
+            var data = {
+                "vk_user_id": 343294797,
+                "vk_app_id": 1234,
+                "vk_is_app_user": 0,
+                "vk_are_notifications_enabled": 0,
+                "vk_language": "en",
+                "vk_ref": "asd",
+                "vk_access_token_settings": "asd",
+                "vk_group_id": 123456,
+                "vk_viewer_group_role": "asd",
+                "vk_platform": "asd",
+                "vk_is_favorite": 0,
+                "sign": "hello"
+            };
+
+            var start_data = {
+                "action": "gamestart",
+                "status": "start_game"
+            };
+
+            var enter_password = {
+                "pswd": "1234"
+            };
+
+            function connect(){
+                ws = new WebSocket("ws://localhost:3000/time_game");
+
+                ws.onopen = function(evt) {
+                    ws.send(JSON.stringify(data));
+                }
+
+                ws.onmessage = function(evt) {
+                    var asd = JSON.parse(evt.data);
+                    var text = "";
+                    for (key in asd)
+                    {
+                        text += "\"" + key + "\":";
+                        text += "\"" + asd[key] + "\"\n";
+                    }
+
+                    alert(text);
+                }
+
+                ws.onclose = function(evt) {
+                    // alert("disconnected: " + evt.data);
+                    ws.close();
+                }
+
+                ws.onerror = function(evt) {
+                    alert("Error: ", evt.data);
+                }
+            }
+
+            function disconnected() {
+                alert("Closed");
+                ws.close();
+            }
+
+            function start_game() {
+                start_data["coefficient"] = Number(document.getElementById("coef").value);
+                ws.send(JSON.stringify(start_data));
+            }
+
+            function EnterPassword() {
+                // for (var i = 0; i < 2000; i += 1) {
+                    enter_password["pswd"] = document.getElementById("password").value;
+                    // alert(JSON.stringify(enter_password));
+                    ws.send(JSON.stringify(enter_password));
+                // }
+            }
+        </script>
+    </body>
+</html>
