@@ -169,7 +169,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 			log.Println("Game Started!")
 
-			var balance float32 // user's balance
+			var balance int // user's balance
 			{
 				row, err := db.Query(
 					"select balance_bizcoin "+
@@ -205,36 +205,39 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 			rand.Seed(time.Now().UnixNano()) // randomise random :)
 
-			price := float32(
-				config.Conf.MinPrice +
-					rand.Intn(
-						config.Conf.MaxPrice-
-							config.Conf.MinPrice+1,
-					),
-			)
+			// price := int(
+			// 	config.Conf.MinPrice +
+			// 		rand.Intn(
+			// 			config.Conf.MaxPrice-
+			// 				config.Conf.MinPrice+1,
+			// 		),
+			// )
 
-			if balance < price {
-				if err = c.WriteJSON(config.Error[5]); err != nil {
-					log.Println("error in sending an error(5) (time_game):", err)
-					return
-				}
-				log.Println("not enough money")
-				continue
-			}
+			// if balance < price {
+			// 	if err = c.WriteJSON(config.Error[5]); err != nil {
+			// 		log.Println("error in sending an error(5) (time_game):", err)
+			// 		return
+			// 	}
+			// 	log.Println("not enough money")
+			// 	continue
+			// }
+			//
+			// _, err = db.Exec(
+			// 	"update user set balance_bizcoin = ? where user_id = ?",
+			// 	balance-price,
+			// 	vkUserID,
+			// )
+			// if err != nil {
+			// 	log.Println("error in changing balance (time_game):", err)
+			// 	return
+			// }
 
-			_, err = db.Exec(
-				"update user set balance_bizcoin = ? where user_id = ?",
-				balance-price,
-				vkUserID,
-			)
-			if err != nil {
-				log.Println("error in changing balance (time_game):", err)
-				return
-			}
 
 			if fir, sec := rand.Intn(config.Conf.WinCount+1), rand.Intn(config.Conf.WinCount+1); fir == sec {
 
-				balance += float32(config.Conf.MinProfit + rand.Intn(config.Conf.MaxProfit-config.Conf.MinProfit))
+				balance += int(config.Conf.MinProfit + rand.Intn(config.Conf.MaxProfit-config.Conf.MinProfit))
+
+
 
 				if _, err = db.Exec(
 					"update user set balance_bizcoin = ? where user_id = ?",
@@ -255,7 +258,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 
 			} else if fir, sec = rand.Intn(config.Conf.DefeatCount), rand.Intn(config.Conf.DefeatCount); fir == sec {
 
-				balance -= float32(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
+				balance -= int(config.Conf.MinLoss + rand.Intn(config.Conf.MaxLoss-config.Conf.MinLoss))
 
 				if _, err = db.Exec(
 					"update user set balance_bizcoin = ? where user_id = ?",
@@ -275,7 +278,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 				}
 
 			} else {
-
+				log.Println("test2")
 				if err = c.WriteJSON(map[string]interface{}{
 					"action":  "win_checking",
 					"status":  "none",
@@ -285,6 +288,7 @@ func TimeGame(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
+
 
 		} else {
 
